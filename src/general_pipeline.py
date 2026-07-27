@@ -31,7 +31,7 @@ default_config = {
     "xgboost_base": {"n_estimators": 100, "learning_rate": 0.1, "max_depth": 6, "random_state": 42, "n_jobs": -1},
     "tuning_method": "None",
     "bo": {"n_estimators": (50, 200), "max_depth": (3, 8), "learning_rate": (0.01, 0.30), "subsample": (0.5, 1.0), "n_iter": 10},
-    "gs": {"n_estimators": [50, 100, 150], "max_depth": [3, 6, 9], "learning_rate": [0.01, 0.1, 0.2]},
+    "gs": {"n_estimators": (50, 200), "max_depth": (3, 8), "learning_rate": (0.01, 0.30), "values_per_param": 3},
     "results": None,
     "best_per_algo": None,
     "best_predictions": {},
@@ -118,10 +118,22 @@ def optimize_best_model(X_train, y_train, X_test, y_test, active_cols):
     # Only building the search differs between the two methods
     if tuning_method == "Grid Search":
         gs_params = Config["gs"]
+        steps = int(gs_params["values_per_param"])
+
+        # Grid Search tries every combination, so a range has to become a list of values.
+        # np.unique drops the repeats a narrow range produces (3 to 4 in 5 steps -> 3, 3, 3, 4, 4)
+        n_estimators = np.unique(np.linspace(*gs_params["n_estimators"], steps).astype(int)).tolist()
+        max_depth = np.unique(np.linspace(*gs_params["max_depth"], steps).astype(int)).tolist()
+
+        # Log spacing: every value is the same multiple of the previous one, because
+        # 0.01 -> 0.02 changes the model far more than 0.29 -> 0.30 does
+        lr_low, lr_high = gs_params["learning_rate"]
+        learning_rate = np.logspace(np.log10(lr_low), np.log10(lr_high), steps).tolist()
+
         search = GridSearchCV(estimator=base_model, cv=3, scoring='neg_mean_absolute_error',
-                              param_grid={'n_estimators': gs_params["n_estimators"],
-                                          'max_depth': gs_params["max_depth"],
-                                          'learning_rate': gs_params["learning_rate"]})
+                              param_grid={'n_estimators': n_estimators,
+                                          'max_depth': max_depth,
+                                          'learning_rate': learning_rate})
     else:
         bo_params = Config["bo"]
         search = BayesSearchCV(estimator=base_model, cv=3, scoring='neg_mean_absolute_error',
@@ -324,16 +336,15 @@ def model_tuning_settings():
 
     if Config["tuning_method"] == "Grid Search":
         gs = Config["gs"]
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         with col1:
-            n_est = st.text_input("n_estimators list", value="50, 100, 150")
-            gs["n_estimators"] = [int(x.strip()) for x in n_est.split(",") if x.strip().isdigit()]
+            gs["n_estimators"] = st.slider("n_estimators range", 10, 500, gs["n_estimators"])
+            gs["max_depth"] = st.slider("max_depth range", 1, 15, gs["max_depth"])
         with col2:
-            depths = st.text_input("max_depth list", value="3, 6, 9")
-            gs["max_depth"] = [int(x.strip()) for x in depths.split(",") if x.strip().isdigit()]
-        with col3:
-            lrs = st.text_input("learning_rate list", value="0.01, 0.1, 0.2")
-            gs["learning_rate"] = [float(x.strip()) for x in lrs.split(",") if x.strip()]
+            gs["learning_rate"] = st.slider("learning_rate range", 0.001, 0.5, gs["learning_rate"])
+            gs["values_per_param"] = st.number_input("Values per parameter", value=gs["values_per_param"], min_value=2, max_value=6, step=1)
+        # Every combination is tried, so one more value per parameter costs a lot
+        st.info(f"Up to {gs['values_per_param'] ** 3} combinations x 3 folds = {gs['values_per_param'] ** 3 * 3} model fits")
 
     elif Config["tuning_method"] == "Bayesian Optimization":
         bo = Config["bo"]
