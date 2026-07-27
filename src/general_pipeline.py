@@ -55,7 +55,7 @@ def calculate_metrics(y_true, y_pred):
     y_true = np.asarray(y_true, dtype=float)
     y_pred = np.asarray(y_pred, dtype=float)
 
-    # Rows with 0 actual are skipped, MAPE cannot divide by 0
+    # MAPE cannot divide by 0
     usable = y_true != 0
     if usable.any():
         mape = float(np.mean(np.abs((y_true[usable] - y_pred[usable]) / y_true[usable])) * 100)
@@ -115,18 +115,16 @@ def optimize_best_model(X_train, y_train, X_test, y_test, active_cols):
 
     base_model = xgb.XGBRegressor(random_state=42, n_jobs=-1)
 
-    # Only building the search differs between the two methods
+    # Only the search object differs
     if tuning_method == "Grid Search":
         gs_params = Config["gs"]
         steps = int(gs_params["values_per_param"])
 
-        # Grid Search tries every combination, so a range has to become a list of values.
-        # np.unique drops the repeats a narrow range produces (3 to 4 in 5 steps -> 3, 3, 3, 4, 4)
+        # Range to list, np.unique drops the repeats
         n_estimators = np.unique(np.linspace(*gs_params["n_estimators"], steps).astype(int)).tolist()
         max_depth = np.unique(np.linspace(*gs_params["max_depth"], steps).astype(int)).tolist()
 
-        # Log spacing: every value is the same multiple of the previous one, because
-        # 0.01 -> 0.02 changes the model far more than 0.29 -> 0.30 does
+        # Log spacing, 0.01->0.02 matters more than 0.29->0.30
         lr_low, lr_high = gs_params["learning_rate"]
         learning_rate = np.logspace(np.log10(lr_low), np.log10(lr_high), steps).tolist()
 
@@ -143,7 +141,7 @@ def optimize_best_model(X_train, y_train, X_test, y_test, active_cols):
                                               'learning_rate': Real(*bo_params["learning_rate"], prior='uniform'),
                                               'subsample': Real(*bo_params["subsample"], prior='uniform')})
 
-    # cv=3 splits randomly, TimeSeriesSplit would suit time series better
+    # cv=3 splits randomly, TimeSeriesSplit would fit better
     search.fit(X_train[active_cols], y_train)
     predictions = search.best_estimator_.predict(X_test[active_cols])
 
@@ -155,7 +153,7 @@ def optimize_best_model(X_train, y_train, X_test, y_test, active_cols):
     }
 
 
-# ---- Pipeline ----
+# Pipeline
 
 def run_pipeline():
     target_col = Config["selected_target"]
@@ -343,7 +341,7 @@ def model_tuning_settings():
         with col2:
             gs["learning_rate"] = st.slider("learning_rate range", 0.001, 0.5, gs["learning_rate"])
             gs["values_per_param"] = st.number_input("Values per parameter", value=gs["values_per_param"], min_value=2, max_value=6, step=1)
-        # Every combination is tried, so one more value per parameter costs a lot
+        # Every combination is tried, cost grows fast
         st.info(f"Up to {gs['values_per_param'] ** 3} combinations x 3 folds = {gs['values_per_param'] ** 3 * 3} model fits")
 
     elif Config["tuning_method"] == "Bayesian Optimization":
