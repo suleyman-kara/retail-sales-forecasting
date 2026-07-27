@@ -24,7 +24,7 @@ default_config = {
     "selected_target": None,
     "feature_sel_algo_list": ["MRMR", "RFE", "SFS"],
     "approved_feature_sel_algo_list": [],
-    "feature_eng_list": ["Year", "Month", "Week of Year", "Quarter of Year", "Target Lag 1", "Target Lag 52", "Target Mean Last Month"],
+    "feature_eng_list": ["Year", "Month", "Week of Year", "Quarter of Year", "Target Lag 1", "Target Lag 52"],
     "approved_feature_eng_list": [],
     "feature_lower_limit": 1,
     "feature_upper_limit": 1,
@@ -101,8 +101,6 @@ def apply_feature_engineering(df, target_col, selected_eng_features):
             df['Target_Lag_1'] = df[target_col].shift(1).fillna(0)
         if "Target Lag 52" in selected_eng_features:
             df['Target_Lag_52'] = df[target_col].shift(52).fillna(0)
-        if "Target Mean Last Month" in selected_eng_features:
-            df['Target_Mean_Last_Month'] = df[target_col].shift(1).rolling(window=4, min_periods=1).mean().fillna(0).round(2)
 
     # Replacing NaN values with 0
     numeric_cols = df.select_dtypes(include=[np.number]).columns
@@ -406,22 +404,25 @@ if Config["results"] is not None:
 
     actual_values = Config["actual_values"]
 
-    if Config.get("show_individual_charts"):
-        st.subheader("Individual Prediction Charts")
-        for m_name, p_vals in preds_dict.items():
-            fig, ax = plt.subplots(figsize=(8, 3))
-            ax.plot(actual_values, label="Actual", color='black', marker='o')
-            ax.plot(p_vals, label=m_name, color='tab:blue', linestyle='--', marker='s')
-            ax.set_title(f"Algorithm: {m_name}")
+    col1, col2, col3 = st.columns([1,4,1])
+
+    with col2:
+        if Config.get("show_individual_charts"):
+            st.subheader("Individual Prediction Charts")
+            for m_name, p_vals in preds_dict.items():
+                fig, ax = plt.subplots(figsize=(8, 3))
+                ax.plot(actual_values, label="Actual", color='black', marker='o')
+                ax.plot(p_vals, label=m_name, color='tab:blue', linestyle='--', marker='s')
+                ax.set_title(f"Algorithm: {m_name}")
+                ax.legend()
+                st.pyplot(fig)
+                plt.close(fig)
+        else:
+            st.subheader("Combined Prediction Comparison")
+            fig, ax = plt.subplots(figsize=(10, 4))
+            ax.plot(actual_values, label="Actual", color='black', linewidth=2.5)
+            for m_name, p_vals in preds_dict.items():
+                ax.plot(p_vals, label=m_name, linestyle='--')
             ax.legend()
             st.pyplot(fig)
             plt.close(fig)
-    else:
-        st.subheader("Combined Prediction Comparison")
-        fig, ax = plt.subplots(figsize=(10, 4))
-        ax.plot(actual_values, label="Actual", color='black', linewidth=2.5)
-        for m_name, p_vals in preds_dict.items():
-            ax.plot(p_vals, label=m_name, linestyle='--')
-        ax.legend()
-        st.pyplot(fig)
-        plt.close(fig)
