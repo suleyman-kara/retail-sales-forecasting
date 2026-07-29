@@ -1,9 +1,10 @@
-# Walmart Sales Forcasting
+# Retail Sales Forecasting
 
-Weekly sales forecasting with XGBoost.
+A Streamlit app that forecasts weekly sales with XGBoost on any uploaded dataset,
+covering feature engineering, feature selection, and hyperparameter tuning.
 
-- `src/data_optimized.ipynb` - the original notebook, written for the Walmart dataset
-- `src/general_pipeline.py` - a Streamlit app that runs the same pipeline on any uploaded dataset
+- `src/general_pipeline.py` - the Streamlit app
+- `src/data_optimized.ipynb` - the original notebook, written for the Walmart Sales Forecast dataset
 
 ## Starting Guide
 ### 1. Clone the repo
@@ -44,8 +45,8 @@ Upload `data/weekly.csv` and pick `Weekly_Sales` as the target to try it out.
 | --- | --- |
 | `data/train.csv`, `stores.csv`, `features.csv` | Raw Kaggle files |
 | `data/weekly.csv` | Store 1, all departments collapsed into one row per week |
-| `src/data_optimized.ipynb` | The notebook the app is based on |
 | `src/general_pipeline.py` | The Streamlit app |
+| `src/data_optimized.ipynb` | The notebook the app is based on |
 
 ## How the App Works
 
