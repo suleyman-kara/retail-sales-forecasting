@@ -28,7 +28,7 @@ default_config = {
     "approved_feature_eng_list": [],
     "feature_lower_limit": 1,
     "feature_upper_limit": 1,
-    "xgboost_base": {"n_estimators": 100, "learning_rate": 0.1, "max_depth": 6, "random_state": 42, "n_jobs": -1},
+    "xgboost_base": {"n_estimators": 100, "learning_rate": 0.1, "max_depth": 6, "random_state": 42, "n_jobs": 1},
     "tuning_method": "None",
     "bo": {"n_estimators": (50, 200), "max_depth": (3, 8), "learning_rate": (0.01, 0.30), "subsample": (0.5, 1.0), "n_iter": 10},
     "gs": {"n_estimators": (50, 200), "max_depth": (3, 8), "learning_rate": (0.01, 0.30), "values_per_param": 3},
@@ -113,7 +113,7 @@ def optimize_best_model(X_train, y_train, X_test, y_test, active_cols):
     if tuning_method == "None":
         return None
 
-    base_model = xgb.XGBRegressor(random_state=42, n_jobs=-1)
+    base_model = xgb.XGBRegressor(random_state=42, n_jobs=1)
 
     # Only the search object differs
     if tuning_method == "Grid Search":
@@ -207,7 +207,7 @@ def run_pipeline():
     model = xgb.XGBRegressor(n_estimators=int(params["n_estimators"]),
                              learning_rate=float(params["learning_rate"]),
                              max_depth=int(params["max_depth"]),
-                             random_state=42, n_jobs=-1)
+                             random_state=42, n_jobs=1)
 
     # Feature ranking
     selected_algos = Config["approved_feature_sel_algo_list"]
@@ -222,7 +222,7 @@ def run_pipeline():
 
     if "SFS" in selected_algos:
         sfs_count = min(max_features, max(1, total_features - 1))
-        selector = SequentialFeatureSelector(estimator=model, n_features_to_select=sfs_count, direction='forward', cv=2, n_jobs=-1).fit(X_train, y_train)
+        selector = SequentialFeatureSelector(estimator=model, n_features_to_select=sfs_count, direction='forward', cv=2, n_jobs=1).fit(X_train, y_train)
         ranked["SFS"] = X_train.columns[selector.get_support()].tolist()
 
     all_results = []
